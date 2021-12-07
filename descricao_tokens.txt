@@ -6,8 +6,7 @@ PONTUACAO
 	;
 OP_REL
 	> | < | = | !=
-OP_ATR
-	= 
+
 
 
 observações

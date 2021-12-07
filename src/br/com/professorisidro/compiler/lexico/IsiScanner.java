@@ -20,9 +20,6 @@ public class IsiScanner {
 			column = 0;
 			String txtConteudo;
 			txtConteudo = new String(Files.readAllBytes(Paths.get(filename)),StandardCharsets.UTF_8);
-//			System.out.println("DEBUG --------");
-//			System.out.println(txtConteudo);
-//			System.out.println("--------------");
 			content = txtConteudo.toCharArray();
 			pos=0;
 		}
@@ -45,16 +42,9 @@ public class IsiScanner {
 			
 			switch(estado) {
 			case 0:
-				if (isChar(currentChar)) {
-					term += currentChar;
-					estado = 1;
-				}
-				else if (isDigit(currentChar)) {
+				if (isDigit(currentChar)) {
 					estado = 2;
 					term += currentChar;
-				}
-				else if (isSpace(currentChar)) {
-					estado = 0;
 				}
 				else if (isOperator(currentChar)) {
 					term += currentChar;
@@ -65,25 +55,62 @@ public class IsiScanner {
 					token.setColumn(column - term.length());
 					return token;
 				}
-				else {
-					throw new IsiLexicalException("Unrecognized SYMBOL");
-				}
-				break;
-			case 1:
-				if (isChar(currentChar) || isDigit(currentChar)) {
-					estado = 1;
+				else if (isInitialDelimiter(currentChar)) {
 					term += currentChar;
-				}
-				else if (isSpace(currentChar) || isOperator(currentChar) || isEOF(currentChar)){
-					if (!isEOF(currentChar))
-						back();
 					token = new Token();
-					token.setType(Token.TK_IDENTIFIER);
+					token.setType(Token.TK_INITIAL_DELIMITER);
 					token.setText(term);
 					token.setLine(line);
 					token.setColumn(column - term.length());
 					return token;
 				}
+				else if (isFinalDelimiter(currentChar)) {
+					term += currentChar;
+					token = new Token();
+					token.setType(Token.TK_FINAL_DELIMITER);
+					token.setText(term);
+					token.setLine(line);
+					token.setColumn(column - term.length());
+					return token;
+				}
+				else if (isKeyword(currentChar)) {
+					term += currentChar;
+					estado = 1;
+				}
+				else if (isSpace(currentChar)) {
+					estado = 0;
+				}
+				else {
+					throw new IsiLexicalException("Unrecognized SYMBOL");
+				}
+				break;
+			case 1:
+				if (isKeyword(currentChar)) {
+					estado = 1;
+					term += currentChar;
+				}
+				/*
+				 * else if (isChar(currentChar) || isDigit(currentChar)) { estado = 1; term +=
+				 * currentChar; }
+				 */
+				
+				 else if (isSpace(currentChar) || isOperator(currentChar) || isEOF(currentChar) || isInitialDelimiter(currentChar) 
+						 || isFinalDelimiter(currentChar) || isDigit(currentChar)){ 
+					 if (!isEOF(currentChar)) 
+						 back(); 
+					 if(term.equals("cos") || term.equals("sen") || term.equals("sqrt") || term.equals("log") || term.equals("pi")) {
+						token = new Token();
+						token.setType(Token.TK_KEYWORD);
+						token.setText(term);
+						token.setLine(line);
+						token.setColumn(column - term.length());
+						return token;
+					 }
+					 else {
+							throw new IsiLexicalException("Malformed Keyword");
+						}
+				 }
+				 
 				else {
 					throw new IsiLexicalException("Malformed Identifier");
 				}
@@ -93,7 +120,7 @@ public class IsiScanner {
 					estado = 2;
 					term += currentChar;
 				}
-				else if (!isChar(currentChar) || isEOF(currentChar)) {
+				else if (!isKeyword(currentChar) || isEOF(currentChar)) {
 					if (!isEOF(currentChar))
 						back();
 					token = new Token();
@@ -131,6 +158,15 @@ public class IsiScanner {
 			column=0;
 		}
 		return c == ' ' || c == '\t' || c == '\n' || c == '\r'; 
+	}
+	private boolean isInitialDelimiter(char c) {
+		return c == '(';
+	}
+	private boolean isFinalDelimiter(char c) {
+		return c == ')';
+	}
+	private boolean isKeyword(char c) {
+		return "log".equals(c) || "sqrt".equals(c)|| "cos".equals(c) || "sen".equals(c) || "pi".equals(c);
 	}
 	
 	private char nextChar() {
